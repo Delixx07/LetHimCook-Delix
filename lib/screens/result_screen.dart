@@ -53,7 +53,7 @@ class ResultScreen extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Ditemukan ${recipes.length} resep dari AI Chef!',
+                        'Ditemukan ${recipes.length} resep dari HIM!',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 14,
