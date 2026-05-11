@@ -1,5 +1,5 @@
 name: tes_1
-description: "ChefPintar - Aplikasi Rekomendasi Resep Berbasis AI"
+description: "LetHimCook - Aplikasi Rekomendasi Resep Berbasis ML Kit"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -10,7 +10,11 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
-  http: ^1.2.1
+  sqflite: ^2.4.2+1
+  path: ^1.9.1
+  string_similarity: ^2.2.0
+  tflite_flutter: ^0.12.1
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
@@ -19,3 +23,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/

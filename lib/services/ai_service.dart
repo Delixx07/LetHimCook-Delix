@@ -1,74 +1,97 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:string_similarity/string_similarity.dart';
 import '../models/recipe.dart';
 
 class AiService {
-  static const String _apiKey = 'YOUR_GROQ_API_KEY';
-  static const String _baseUrl =
-      'https://api.groq.com/openai/v1/chat/completions';
+  static List<Recipe>? _cachedRecipes;
 
+  /// Load database resep dari assets
+  static Future<List<Recipe>> _loadRecipeDatabase() async {
+    if (_cachedRecipes != null) return _cachedRecipes!;
+
+    final jsonStr = await rootBundle.loadString('assets/recipes.json');
+    final List<dynamic> jsonList = jsonDecode(jsonStr);
+    _cachedRecipes =
+        jsonList
+            .map((item) => Recipe.fromJson(item as Map<String, dynamic>))
+            .toList();
+    return _cachedRecipes!;
+  }
+
+  /// Cari resep berdasarkan bahan yang dipilih user
   static Future<List<Recipe>> getRecipeRecommendations(
     List<String> ingredients,
   ) async {
-    final daftarBahan = ingredients.join(', ');
+    final allRecipes = await _loadRecipeDatabase();
+    final userIngredients =
+        ingredients.map((e) => e.toLowerCase().trim()).toSet();
 
-    final systemPrompt =
-        'Kamu adalah koki profesional. Bahan yang tersedia: $daftarBahan. '
-        'Berikan 3 rekomendasi resep. '
-        'ATURAN: '
-        '1. bahan_lengkap: sertakan takaran dan kondisi (contoh: "2 siung bawang merah, iris tipis"). Tambahkan bumbu dasar jika perlu. '
-        '2. langkah_langkah: BUAT LEBIH DARI 3 LANGKAH (minimal 5-8 langkah per resep). Pecah proses memasak menjadi langkah-langkah detail dan berurutan seperti di Cookpad. '
-        'Jelaskan ukuran api, durasi, dan tanda kematangan. Contoh: Langkah 1 siapkan bahan, Langkah 2 buat adonan/saus, Langkah 3 panaskan minyak & goreng, Langkah 4 campur bumbu, dst. '
-        '3. Kembalikan HANYA JSON Array murni tanpa markdown. '
-        'Format: nama, deskripsi_singkat, waktu_masak, bahan_lengkap (array), langkah_langkah (array).';
+    final scored = <_ScoredRecipe>[];
 
-    final body = jsonEncode({
-      'model': 'llama-3.3-70b-versatile',
-      'messages': [
-        {'role': 'system', 'content': systemPrompt},
-        {
-          'role': 'user',
-          'content': 'Berikan 3 rekomendasi resep dengan bahan: $daftarBahan',
-        },
-      ],
-      'temperature': 0.7,
-      'max_completion_tokens': 4096,
-      'top_p': 1,
-      'stream': false,
+    for (final recipe in allRecipes) {
+      final recipeBahan =
+          recipe.bahanUtama.map((e) => e.toLowerCase().trim()).toSet();
+
+      int matched = 0;
+      int missing = 0;
+
+      for (final rb in recipeBahan) {
+        bool isPunya = false;
+        final rbWords = rb.split(' '); 
+        
+        for (final userBahan in userIngredients) {
+          if (rb == userBahan || userBahan.similarityTo(rb) > 0.85) {
+            isPunya = true;
+            break;
+          }
+          for (final word in rbWords) {
+            if (word == userBahan || userBahan.similarityTo(word) > 0.85) {
+              isPunya = true;
+              break;
+            }
+          }
+          if (isPunya) break;
+        }
+
+        if (isPunya) {
+          matched++;
+        } else {
+          missing++;
+        }
+      }
+
+      // STRICT MODE: Hanya izinkan resep jika bahan yang kurang (missing) MAKSIMAL 1 atau 2.
+      // Jadi kalau cuma punya ayam & nasi, dan soto ayam butuh 5 bahan (kurang 3), soto ayam akan DITOLAK.
+      if (matched > 0 && missing <= 2) {
+        double matchPercentage = matched / recipeBahan.length;
+        double score = (matchPercentage * 100) - (missing * 50);
+
+        scored.add(_ScoredRecipe(recipe: recipe, score: score, matched: matched, missing: missing));
+      }
+    }
+
+    scored.sort((a, b) {
+      int matchedCompare = b.matched.compareTo(a.matched);
+      if (matchedCompare != 0) return matchedCompare;
+      
+      return a.missing.compareTo(b.missing);
     });
 
-    final response = await http.post(
-      Uri.parse(_baseUrl),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $_apiKey',
-      },
-      body: body,
-    );
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Groq API Error (${response.statusCode}): ${response.body}',
-      );
-    }
-
-    final jsonResponse = jsonDecode(response.body) as Map<String, dynamic>;
-    final rawText = jsonResponse['choices'][0]['message']['content'] as String;
-
-    return _parseRecipes(rawText);
+    return scored.take(3).map((s) => s.recipe).toList();
   }
+}
 
-  static List<Recipe> _parseRecipes(String rawText) {
-    String cleaned = rawText.trim();
-    if (cleaned.startsWith('```')) {
-      cleaned = cleaned.replaceFirst(RegExp(r'^```json?\s*'), '');
-      cleaned = cleaned.replaceFirst(RegExp(r'```\s*$'), '');
-      cleaned = cleaned.trim();
-    }
+class _ScoredRecipe {
+  final Recipe recipe;
+  final double score;
+  final int matched;
+  final int missing;
 
-    final List<dynamic> jsonList = jsonDecode(cleaned);
-    return jsonList
-        .map((item) => Recipe.fromJson(item as Map<String, dynamic>))
-        .toList();
-  }
+  _ScoredRecipe({
+    required this.recipe,
+    required this.score,
+    required this.matched,
+    required this.missing,
+  });
 }

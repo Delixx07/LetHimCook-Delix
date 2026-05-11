@@ -1,10 +1,59 @@
 import 'package:flutter/material.dart';
 import '../models/recipe.dart';
+import '../services/db_service.dart';
+import '../services/tflite_service.dart';
 
-class DetailScreen extends StatelessWidget {
+class DetailScreen extends StatefulWidget {
   final Recipe recipe;
 
   const DetailScreen({super.key, required this.recipe});
+
+  @override
+  State<DetailScreen> createState() => _DetailScreenState();
+}
+
+class _DetailScreenState extends State<DetailScreen> {
+  bool _isFavorite = false;
+  String _aiClassification = "Menganalisis... ⏳";
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFavorite();
+    _runAiClassification();
+  }
+
+  Future<void> _runAiClassification() async {
+    final result = await TfliteService.classifyRecipeHealth(widget.recipe);
+    if (mounted) {
+      setState(() => _aiClassification = result);
+    }
+  }
+
+  Future<void> _checkFavorite() async {
+    final isFav = await DbService.isFavorite(widget.recipe.nama);
+    if (mounted) {
+      setState(() => _isFavorite = isFav);
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_isFavorite) {
+      await DbService.removeFavorite(widget.recipe.nama);
+    } else {
+      await DbService.addFavorite(widget.recipe);
+    }
+    await _checkFavorite();
+    
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isFavorite ? 'Disimpan ke Favorit 🤍' : 'Dihapus dari Favorit'),
+        backgroundColor: const Color(0xFF587893),
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,9 +69,19 @@ class DetailScreen extends StatelessWidget {
               icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
               onPressed: () => Navigator.pop(context),
             ),
+            actions: [
+              IconButton(
+                icon: Icon(
+                  _isFavorite ? Icons.favorite : Icons.favorite_border,
+                  color: const Color(0xFF98F6CD),
+                  size: 28,
+                ),
+                onPressed: _toggleFavorite,
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
-                recipe.nama,
+                widget.recipe.nama,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -55,6 +114,36 @@ class DetailScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildInfoRow(),
+                  const SizedBox(height: 16),
+                  
+                  // AI Classification Badge
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _aiClassification.contains('Sehat') && !_aiClassification.contains('Kurang')
+                          ? Colors.green.withValues(alpha: 0.2)
+                          : Colors.orange.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _aiClassification.contains('Sehat') && !_aiClassification.contains('Kurang')
+                            ? Colors.green.withValues(alpha: 0.5)
+                            : Colors.orange.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: Text(
+                      _aiClassification,
+                      style: TextStyle(
+                        color: _aiClassification.contains('Sehat') && !_aiClassification.contains('Kurang')
+                            ? Colors.greenAccent
+                            : Colors.orangeAccent,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+
                   const SizedBox(height: 28),
 
                   _buildSectionTitle(
@@ -86,11 +175,11 @@ class DetailScreen extends StatelessWidget {
       spacing: 12,
       runSpacing: 12,
       children: [
-        _buildInfoBadge(Icons.timer_outlined, recipe.waktuMasak),
-        _buildInfoBadge(Icons.checklist, '${recipe.bahanLengkap.length} bahan'),
+        _buildInfoBadge(Icons.timer_outlined, widget.recipe.waktuMasak),
+        _buildInfoBadge(Icons.checklist, '${widget.recipe.bahanLengkap.length} bahan'),
         _buildInfoBadge(
           Icons.list_alt,
-          '${recipe.langkahLangkah.length} langkah',
+          '${widget.recipe.langkahLangkah.length} langkah',
         ),
       ],
     );
@@ -150,7 +239,7 @@ class DetailScreen extends StatelessWidget {
 
   Widget _buildBahanList() {
     return Column(
-      children: recipe.bahanLengkap.map((bahan) {
+      children: widget.recipe.bahanLengkap.map((bahan) {
         return Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: Row(
@@ -180,8 +269,8 @@ class DetailScreen extends StatelessWidget {
 
   Widget _buildLangkahList() {
     return Column(
-      children: List.generate(recipe.langkahLangkah.length, (index) {
-        final langkah = recipe.langkahLangkah[index];
+      children: List.generate(widget.recipe.langkahLangkah.length, (index) {
+        final langkah = widget.recipe.langkahLangkah[index];
         return Padding(
           padding: const EdgeInsets.only(bottom: 20),
           child: Row(

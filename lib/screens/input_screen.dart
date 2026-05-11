@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/ai_service.dart';
 import 'result_screen.dart';
+import 'favorite_screen.dart';
 
 class InputScreen extends StatefulWidget {
   const InputScreen({super.key});
@@ -76,15 +77,26 @@ class _InputScreenState extends State<InputScreen> {
 
       if (!mounted) return;
 
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => ResultScreen(recipes: recipes)),
-      );
+      if (recipes.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tidak ada resep cocok. Coba tambah bahan lain!'),
+            backgroundColor: Color(0xFF587893),
+          ),
+        );
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ResultScreen(recipes: recipes),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Gagal mengambil resep: $e'),
+          content: Text('Gagal mencari resep: $e'),
           backgroundColor: Colors.red.shade700,
         ),
       );
@@ -130,6 +142,17 @@ class _InputScreenState extends State<InputScreen> {
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.favorite, color: Color(0xFF98F6CD)),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const FavoriteScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: Stack(
         children: [
@@ -151,7 +174,7 @@ class _InputScreenState extends State<InputScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Tambahkan bahan, lalu pilih yang ingin digunakan.',
+                        'Ketik bahan yang kamu punya,HIM akan menemukan resepnya!',
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 14,
@@ -160,14 +183,13 @@ class _InputScreenState extends State<InputScreen> {
                       ),
                       const SizedBox(height: 20),
 
+                      // Input field
                       Container(
                         decoration: BoxDecoration(
                           color: const Color(0xFF587893).withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: const Color(
-                              0xFF95CED3,
-                            ).withValues(alpha: 0.3),
+                            color: const Color(0xFF95CED3).withValues(alpha: 0.3),
                           ),
                         ),
                         child: TextField(
@@ -177,7 +199,7 @@ class _InputScreenState extends State<InputScreen> {
                             fontSize: 16,
                           ),
                           decoration: InputDecoration(
-                            hintText: 'Ketik bahan (misal: ayam, bawang...)',
+                            hintText: 'Ketik bahan (misal: ayam)',
                             hintStyle: TextStyle(
                               color: Colors.white.withValues(alpha: 0.4),
                               fontSize: 15,
@@ -247,7 +269,7 @@ class _InputScreenState extends State<InputScreen> {
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  'Belum ada bahan.\nTambahkan bahan di atas!',
+                                  'Belum ada bahan.\nKetik bahan di kolom atas!',
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
                                     color: Colors.white.withValues(alpha: 0.4),
@@ -268,18 +290,12 @@ class _InputScreenState extends State<InputScreen> {
                               margin: const EdgeInsets.only(bottom: 8),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? const Color(
-                                        0xFF98F6CD,
-                                      ).withValues(alpha: 0.15)
-                                    : const Color(
-                                        0xFF587893,
-                                      ).withValues(alpha: 0.3),
+                                    ? const Color(0xFF98F6CD).withValues(alpha: 0.15)
+                                    : const Color(0xFF587893).withValues(alpha: 0.3),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: isSelected
-                                      ? const Color(
-                                          0xFF98F6CD,
-                                        ).withValues(alpha: 0.5)
+                                      ? const Color(0xFF98F6CD).withValues(alpha: 0.5)
                                       : Colors.transparent,
                                 ),
                               ),
@@ -341,9 +357,7 @@ class _InputScreenState extends State<InputScreen> {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               elevation: 4,
-                              shadowColor: const Color(
-                                0xFF98F6CD,
-                              ).withValues(alpha: 0.4),
+                              shadowColor: const Color(0xFF98F6CD).withValues(alpha: 0.4),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,

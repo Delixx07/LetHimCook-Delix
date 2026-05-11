@@ -1,6 +1,6 @@
-# 🔥 LetHimCook — AI Recipe Recommender
+# 🔥 LetHimCook — On-Device AI Recipe Recommender
 
-**LetHimCook** adalah aplikasi mobile berbasis Flutter yang memanfaatkan kecerdasan buatan (AI) untuk merekomendasikan resep masakan berdasarkan bahan-bahan yang dimiliki pengguna. Cukup masukkan bahan yang ada di dapur, pilih bahan yang ingin digunakan, dan biarkan AI meracik resep terbaik untuk kamu!
+**LetHimCook** adalah aplikasi mobile berbasis Flutter yang dirancang sebagai asisten masak cerdas dengan pendekatan **100% Offline-First**. Aplikasi ini dapat mencari resep secara cerdas dari bahan yang kamu miliki, mengklasifikasikan tingkat kesehatan resep menggunakan *Machine Learning* secara *on-device*, dan menyimpan resep favoritmu ke dalam database lokal tanpa memerlukan koneksi internet!
 
 ---
 
@@ -8,71 +8,48 @@
 
 | Fitur | Deskripsi |
 |---|---|
-| 🧑‍🍳 **Rekomendasi Resep AI** | Menggunakan Groq API (LLaMA 3.3 70B) untuk menghasilkan 3 rekomendasi resep lengkap |
-| ✅ **Pilih Bahan dengan Checkbox** | Tambahkan bahan ke daftar, lalu centang bahan mana saja yang ingin digunakan |
-| 📝 **Langkah Memasak Detail** | Setiap resep dilengkapi 5-8 langkah memasak detail bergaya Cookpad |
-| 🎨 **UI Modern & Gelap** | Tampilan dark theme yang elegan dengan palet warna kustom |
-| 🔥 **Loading "LET HIM COOK..."** | Animasi loading yang unik saat AI sedang memproses resep |
-
----
-
-## 🎨 Palet Warna
-
-| Nama | Warna | Hex Code |
-|---|---|---|
-| Primary Dark | 🟦 | `#203A56` |
-| Secondary Blue | 🔵 | `#587893` |
-| Accent Teal | 🩵 | `#95CED3` |
-| Button Mint | 🟢 | `#98F6CD` |
+| 🧠 **On-Device AI Classification** | Menggunakan **TensorFlow Lite (TFLite)** secara *offline* untuk memprediksi apakah suatu resep termasuk kategori "Sehat" atau "Kurang Sehat" berdasarkan komposisinya. |
+| 🔍 **Smart Recipe Matching** | Mencari resep dari database lokal menggunakan algoritma kecocokan ketat (*strict match*) & toleransi *typo* (`string_similarity`). |
+| 💖 **Favorite & Local Database** | Menyimpan resep masakan favorit ke dalam penyimpanan lokal secara permanen menggunakan **SQLite** (`sqflite`). |
+| ✅ **Pilih Bahan dengan Checkbox** | Tambahkan bahan ke daftar, lalu centang bahan mana saja yang ingin digunakan. AI menolak resep jika bahan kurang terlalu banyak. |
+| 🎨 **UI Modern & Gelap** | Tampilan *dark theme* yang elegan dengan palet warna kustom. |
 
 ---
 
 ## 📱 Alur Aplikasi
 
-```
+```text
 InputScreen → ResultScreen → DetailScreen
+                 ↳ FavoriteScreen
 ```
 
-1. **InputScreen** — Pengguna mengetik dan menambahkan bahan makanan ke daftar. Bahan yang sudah ditambahkan bisa dicentang/tidak dicentang untuk menentukan bahan mana yang akan digunakan.
-2. **ResultScreen** — Menampilkan 3 kartu rekomendasi resep dari AI, lengkap dengan nama resep, deskripsi singkat, dan estimasi waktu memasak.
-3. **DetailScreen** — Menampilkan detail resep yang dipilih: daftar bahan lengkap beserta takaran, dan langkah-langkah memasak yang detail dan berurutan.
+1. **InputScreen** — Pengguna mengetik dan menambahkan bahan makanan ke daftar. AI akan memilah kombinasi resep terbaik berdasarkan bahan yang dicentang.
+2. **ResultScreen** — Menampilkan daftar rekomendasi resep yang relevan berdasarkan tingkat kecocokan bahan (*Missing Ingredients Filter*).
+3. **DetailScreen** — Menampilkan detail resep. Di sini **TFLite** akan bekerja langsung menganalisis resep, dan pengguna bisa menekan tombol 💖 untuk menyimpannya.
+4. **FavoriteScreen** — Layar khusus yang memuat semua resep favorit pengguna yang ditarik secara dinamis dari database SQLite.
 
 ---
 
 ## 🏗️ Struktur Proyek (Tree)
 
-```
+```text
 lib/
 ├── main.dart                    # Entry point & konfigurasi tema aplikasi
 ├── models/
-│   └── recipe.dart              # Model data Recipe (nama, bahan, langkah, dll)
+│   └── recipe.dart              # Model data Recipe (termasuk SQLite toMap/fromMap)
 ├── screens/
 │   ├── input_screen.dart        # Halaman input & pemilihan bahan
 │   ├── result_screen.dart       # Halaman daftar rekomendasi resep
-│   └── detail_screen.dart       # Halaman detail resep (bahan + langkah)
+│   ├── detail_screen.dart       # Halaman detail resep (TFLite Scanner & Favorite)
+│   └── favorite_screen.dart     # Halaman daftar resep favorit pengguna
 └── services/
-    └── ai_service.dart          # Service untuk komunikasi dengan Groq API
+    ├── ai_service.dart          # Algoritma smart matching resep ke database JSON
+    ├── tflite_service.dart      # Integrasi model TensorFlow Lite (.tflite)
+    └── db_service.dart          # Integrasi CRUD SQLite untuk fitur favorit
+assets/
+├── recipes.json                 # Offline database berisi 40+ resep Nusantara
+└── recipe_classifier.tflite     # Model Machine Learning hasil konversi ke TFLite
 ```
-
-### Penjelasan Setiap File
-
-| File | Deskripsi |
-|---|---|
-| `main.dart` | Konfigurasi `MaterialApp`, pengaturan `ThemeData` dengan palet warna kustom, dan routing ke `InputScreen` |
-| `models/recipe.dart` | Data class `Recipe` dengan factory `fromJson()` untuk parsing respons JSON dari AI dengan handling tipe data yang robust |
-| `screens/input_screen.dart` | UI untuk menambah bahan ke daftar persisten, memilih bahan via checkbox, dan tombol "Cari Resep" yang memanggil AI |
-| `screens/result_screen.dart` | Menampilkan daftar resep hasil rekomendasi AI dalam bentuk kartu yang bisa di-tap untuk melihat detail |
-| `screens/detail_screen.dart` | Menampilkan detail lengkap resep dengan `CustomScrollView`, badge info (waktu, jumlah bahan, jumlah langkah), daftar bahan, dan langkah memasak bernomor |
-| `services/ai_service.dart` | Mengirim request ke Groq REST API dengan prompt engineering untuk menghasilkan resep detail bergaya Cookpad |
-
----
-
-## 🛠️ Teknologi yang Digunakan
-
-- **Flutter** — Framework UI cross-platform
-- **Dart** — Bahasa pemrograman
-- **Groq API** — Backend AI (model: `llama-3.3-70b-versatile`)
-- **HTTP Package** — Untuk REST API calls (`http: ^1.2.1`)
 
 ---
 
@@ -80,7 +57,7 @@ lib/
 
 ### Prasyarat
 - Flutter SDK (≥ 3.9.2)
-- Groq API Key (gratis di [console.groq.com](https://console.groq.com))
+- Karena aplikasi ini memuat *package* Native (C++/NDK) seperti `tflite_flutter` dan `sqflite`, sangat disarankan untuk menjalankan aplikasi pada *real device* Android/iOS atau Emulator yang terkonfigurasi dengan baik.
 
 ### Langkah-langkah
 
@@ -90,46 +67,32 @@ lib/
    cd LetHimCook
    ```
 
-2. **Masukkan API Key**
-   Buka file `lib/services/ai_service.dart` dan ganti placeholder:
-   ```dart
-   static const String _apiKey = 'YOUR_GROQ_API_KEY';
-   ```
-   dengan API Key kamu dari [Groq Console](https://console.groq.com).
-
-3. **Install dependencies**
+2. **Install dependencies**
    ```bash
    flutter pub get
    ```
 
-4. **Jalankan aplikasi**
+3. **Jalankan aplikasi**
    ```bash
    flutter run
    ```
 
----
-
-## 📦 Dependencies
-
-```yaml
-dependencies:
-  flutter: sdk
-  cupertino_icons: ^1.0.8
-  http: ^1.2.1
-
-dev_dependencies:
-  flutter_test: sdk
-  flutter_lints: ^5.0.0
-```
+> **Catatan:** Semua layanan berjalan 100% secara OFFLINE. Kamu tidak perlu mengatur API Key sama sekali!
 
 ---
 
-## 👨‍💻 Kontributor
+## 📷 Dokumentasi
+*(Catatan: Tangkapan layar di bawah mungkin merupakan versi UI sebelumnya)*
 
-- **Delixx07** — Developer
+### Input Screen
+<img width="474" height="1020" alt="image" src="https://github.com/user-attachments/assets/8459f047-aacb-4ae9-a20f-7a82ce4c83f7" />
 
----
+### Loading Screen
+<img width="470" height="1027" alt="image" src="https://github.com/user-attachments/assets/54eef8e5-a7c4-46c8-ae22-dcef80b274cb" />
 
-## 📄 Lisensi
+### Result Screen
+<img width="470" height="1028" alt="image" src="https://github.com/user-attachments/assets/9b8ec9a8-e5cc-4a72-84eb-6e74909ceb4a" />
 
-Proyek ini dibuat untuk keperluan akademik (Tugas Mata Kuliah PBB).
+### Detail Screen
+<img width="473" height="1022" alt="image" src="https://github.com/user-attachments/assets/f7e6ad65-35aa-4cfd-ad2d-0e70359775e0" />
+<img width="465" height="1036" alt="image" src="https://github.com/user-attachments/assets/221404ea-1a8d-4018-8db7-52bd0a01bcd8" />
