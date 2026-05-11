@@ -30,25 +30,30 @@ InputScreen → ResultScreen → DetailScreen
 
 ---
 
-## 🏗️ Struktur Proyek (Tree)
+## 🤖 Cara Kerja AI
+
+Aplikasi ini menggunakan 2 jenis kecerdasan buatan (*Artificial Intelligence*) yang berjalan 100% secara lokal di perangkat:
+
+### 1. Smart Recipe Matching (Fuzzy Logic & Scoring)
+Saat pengguna memasukkan daftar bahan, algoritma akan melakukan pencarian cerdas ke dalam database *offline* (`recipes.json`):
+*   **Typo Tolerance:** Menggunakan package `string_similarity` (algoritma *Levenshtein Distance*). Jika pengguna mengetik "aym", AI tahu bahwa tingkat kemiripannya dengan "ayam" > 85% dan akan menganggapnya benar.
+*   **Scoring & Filtering:** AI menghitung jumlah bahan yang cocok (*matched*) dan bahan yang kurang (*missing*). AI menggunakan **Strict Mode**, di mana resep akan otomatis didiskualifikasi jika membutuhkan lebih dari 2 bahan tambahan yang tidak dimiliki pengguna.
+
+### 2. Klasifikasi Kesehatan (TensorFlow Lite)
+Saat membuka detail resep, aplikasi menggunakan model Machine Learning yang telah dilatih secara khusus (*Custom Keras Model*) untuk menilai kesehatan makanan:
+*   **Ekstraksi Fitur:** `TfliteService` membaca daftar bahan resep dan mengubahnya menjadi *Tensor* biner (kumpulan angka 0 dan 1).
+*   **Inference Lokal:** Tensor dimasukkan ke dalam model `recipe_classifier.tflite` yang berjalan di CPU HP (*offline*).
+*   **Output:** Model memproses data menggunakan fungsi aktivasi *Sigmoid* untuk menghasilkan skor probabilitas, kemudian melabeli makanan tersebut dengan **"🌱 Sehat"** atau **"⚠️ Kurang Sehat (Tinggi Kalori)"**.
+
+---
+
+## 🏗️ Struktur Proyek Inti
 
 ```text
 lib/
-├── main.dart                    # Entry point & konfigurasi tema aplikasi
-├── models/
-│   └── recipe.dart              # Model data Recipe (termasuk SQLite toMap/fromMap)
-├── screens/
-│   ├── input_screen.dart        # Halaman input & pemilihan bahan
-│   ├── result_screen.dart       # Halaman daftar rekomendasi resep
-│   ├── detail_screen.dart       # Halaman detail resep (TFLite Scanner & Favorite)
-│   └── favorite_screen.dart     # Halaman daftar resep favorit pengguna
-└── services/
-    ├── ai_service.dart          # Algoritma smart matching resep ke database JSON
-    ├── tflite_service.dart      # Integrasi model TensorFlow Lite (.tflite)
-    └── db_service.dart          # Integrasi CRUD SQLite untuk fitur favorit
-assets/
-├── recipes.json                 # Offline database berisi 40+ resep Nusantara
-└── recipe_classifier.tflite     # Model Machine Learning hasil konversi ke TFLite
+├── screens/       # Antarmuka pengguna (Input, Result, Detail, Favorite)
+└── services/      # Logika inti sistem (AI Matching, TFLite Classifier, SQLite DB)
+assets/            # File model TFLite (.tflite) dan database resep lokal (.json)
 ```
 
 ---
