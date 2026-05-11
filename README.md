@@ -51,9 +51,20 @@ Saat membuka detail resep, aplikasi menggunakan model Machine Learning yang tela
 
 ```text
 lib/
-├── screens/       # Antarmuka pengguna (Input, Result, Detail, Favorite)
-└── services/      # Logika inti sistem (AI Matching, TFLite Classifier, SQLite DB)
-assets/            # File model TFLite (.tflite) dan database resep lokal (.json)
+├── models/
+│   └── recipe.dart              # Model data resep masakan
+├── screens/
+│   ├── input_screen.dart        # Layar utama (input & pemilihan bahan)
+│   ├── result_screen.dart       # Layar hasil rekomendasi AI
+│   ├── detail_screen.dart       # Layar instruksi masak & TFLite scanner
+│   └── favorite_screen.dart     # Layar daftar resep tersimpan
+└── services/
+    ├── ai_service.dart          # Logika fuzzy matching & scoring
+    ├── tflite_service.dart      # Handler untuk model TensorFlow Lite
+    └── db_service.dart          # Handler SQLite untuk fitur favorit
+assets/
+├── recipes.json                 # Database offline berisi 40+ resep
+└── recipe_classifier.tflite     # Model klasifikasi AI pra-latih
 ```
 
 ---
