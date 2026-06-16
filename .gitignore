@@ -45,3 +45,6 @@ app.*.map.json
 /android/app/release
 
 scratch/venv/
+
+# Local scratch/experiment files
+test_groq.dart
